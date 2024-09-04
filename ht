@@ -8,7 +8,7 @@ HT_KEY="${HT_KEY:-hardenedtomb}"
 HT_FMT="${HT_FMT:-hex}"
 
 __exec__() { >&2 "$@" || { >&2 echo "[[[ FAIL ]]]: $@" && false; } }
-init_disk() { c2yptsetup luksFormat --hash sha512 --key-size 512 "$HT_IMG"; }
+init_disk() { cryptsetup luksFormat --hash sha512 --key-size 512 "$HT_IMG"; }
 open_disk() { cryptsetup luksOpen "$HT_IMG" "$HT_MAP"; }
 lock_disk() { cryptsetup luksClose "/dev/mapper/${HT_MAP}"; }
 init_mapper() { mkfs.ext4 "/dev/mapper/${HT_MAP}"; }

@@ -27,7 +27,8 @@ fdec_raw() { cat; }
 fenc_b64() { base64; }
 fdec_b64() { base64 -d; }
 fadd_data() { __exec__ [[ $1 =~ ^[a-zA-Z0-9/]+$ ]] && mkdir -p $(dirname "${HT_DIR}/$1") && "fdec_${HT_FMT}" | gpg --homedir "${HT_DIR}/.gnupg" -r "$HT_KEY" --encrypt -o "${HT_DIR}/${1}"; }
-fget_data() { __exec__ [[ $1 =~ ^[a-zA-Z0-9/]+$ ]] && gpg --homedir "${HT_DIR}/.gnupg" --decrypt "$1" | "fenc_${HT_FMT}"; }
+fget_data() { __exec__ [[ $1 =~ ^[a-zA-Z0-9/]+$ ]] && gpg --homedir "${HT_DIR}/.gnupg" --decrypt "${HT_DIR}/${1}" | "fenc_${HT_FMT}"; }
+flst_data() { __exec__ [[ ${1:-/} =~ ^[a-zA-Z0-9/]+$ ]] && tree "${HT_DIR}/${1}" | grep -v '+' | tail -n +2 | head -n -2; }
 
 for v in base64 cat cryptsetup echo git gpg gpg-agent killall mkfs.ext4 mount sync umount xxd; do __exec__ test_command $v; done
 case "$1" in
@@ -37,5 +38,6 @@ case "$1" in
   lock) __exec__ kill_gpg && __exec__ sync && { __exec__ lock_mapper || true; } && __exec__ lock_disk ;;
   addk) shift && __exec__ fadd_data "$@" && __exec__ save_git ;;
   getk) shift && __exec__ fget_data "$@" ;;
+  lstk) shift && __exec__ flst_data "$@" ;;
   *) >&2 echo "view source to see the usage at $0" && exit 1 ;;
 esac

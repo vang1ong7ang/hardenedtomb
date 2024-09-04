@@ -14,6 +14,8 @@ use hardenedtomb inside a qemu virtualized environment to enhance the security
 qemu-system-aarch64 -nographic -M virt -cpu cortex-a53 -m 1G -kernel vmlinux -initrd initramfs secrets.img
 ```
 
+see <https://vang1ong7ang.github.io/hardenedtomb/> to download a working kernel and initrd
+
 ## environment
 
 - `HT_IMG`: the block device for hardened tomb to be used
@@ -30,3 +32,5 @@ qemu-system-aarch64 -nographic -M virt -cpu cortex-a53 -m 1G -kernel vmlinux -in
 - `ht lock`: lock hardened tomb
 - `ht addk KEYPATH`: insert key (use `HT_FMT` to control the input format)
 - `ht getk KEYPATH`: show key (use `HT_FMT` to control the output format)
+- `ht lstk [KEYPATH]`: list key entries
+

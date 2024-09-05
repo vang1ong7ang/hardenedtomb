@@ -6,28 +6,31 @@ HT_MAP="${HT_MAP:-HT}"
 HT_DIR="${HT_DIR:-/mnt}"
 HT_KEY="${HT_KEY:-hardenedtomb}"
 HT_FMT="${HT_FMT:-hex}"
+HT_CRV="${HT_CRV:-k256}"
+HT_PUB="${HT_PUB:-hex}"
+HT_SHA="${HT_SHA:-keccak-256}"
 
 __exec__() { >&2 "$@" || { >&2 echo "[[[ FAIL ]]]: $@" && false; } }
 __exeo__() { "$@" || { >&2 echo "[[[ FAIL ]]]: $@" && false; } }
 
-fenc_hex() { xxd -p -c32; }
+fcrv_k256() { sed "s/^/302e0201010420/" | sed "s/$/a00706052b8104000a/"; }
+fcrv_p256() { sed "s/^/30310201010420/" | sed "s/$/a00a06082a8648ce3d030107/"; }
+fpub_der() { openssl ec -inform der -outform der -pubout; }
+fpub_pem() { openssl ec -inform der -outform pem -pubout; }
+fpub_raw() { fpub_der | tail -c 64; }
+fpub_hex() { fpub_raw | xxd -p -c32; }
+
 fenc_raw() { cat; }
+fenc_txt() { fenc_raw | awk 1 -; }
+fenc_hex() { xxd -p -c32; }
 fenc_b64() { base64; }
-fenc_der_k256() { fenc_hex | sed "s/^/302e0201010420/" | sed "s/$/a00706052b8104000a/" | xxd -r -p; }
-fenc_pem_k256() { fenc_der_k256 | openssl ec -inform der; }
-fenc_der_p256() { { echo 30310201010420 && fenc_hex && echo a00a06082a8648ce3d030107; } | xxd -r -p; }
-fenc_pem_p256() { fenc_der_p256 | openssl ec -inform der; }
-fenc_pub_der_k256() { fenc_der_k256 | openssl ec -inform der -outform der -pubout; }
-fenc_pub_pem_k256() { fenc_der_k256 | openssl ec -inform der -outform pem -pubout; }
-fenc_pub_raw_k256() { fenc_pub_der_k256 | tail -c 64; }
-fenc_pub_hex_k256() { fenc_pub_raw_k256 | xxd -p -c32; }
-fenc_pub_der_p256() { fenc_der_p256 | openssl ec -inform der -outform der -pubout; }
-fenc_pub_pem_p256() { fenc_der_k256 | openssl ec -inform der -outform pem -pubout; }
-fenc_pub_raw_p256() { fenc_pub_der_p256 | tail -c 64; }
-fenc_pub_hex_p256() { fenc_pub_raw_p256 | xxd -p -c32; }
-fenc_pub_addr_eth() { fenc_pub_raw_k256 | openssl dgst -keccak-256 -binary | tail -c20 | xxd -p -c20 | sed "s/^/0x/"; }
-fdec_hex() { xxd -r -p; }
+fenc_der() { fenc_hex | "fcrv_${HT_CRV}" | xxd -r -p; }
+fenc_pem() { fenc_der | openssl ec -inform der; }
+fenc_pub() { fenc_der | "fpub_${HT_PUB}"; }
+fenc_sig() { fenc_pem | openssl dgst "-${HT_SHA}" -sign /dev/stdin $1 | xxd -p -c 128; }
 fdec_raw() { cat; }
+fdec_txt() { sed 's/[^[:print:]\t]//g'; }
+fdec_hex() { xxd -r -p; }
 fdec_b64() { base64 -d; }
 
 init_disk() { cryptsetup luksFormat --hash sha512 --key-size 512 "$HT_IMG"; }
@@ -43,16 +46,15 @@ save_git() { cd "$HT_DIR" && git add "$1" && git commit -m save; }
 drop_git() { cd "$HT_DIR" && git reset --hard && git clean -df; }
 prep_dir() { init_gpg && init_git && sync; }
 test_command() { >/dev/null command -v $1; }
-fadd_data() { mkdir -p $(dirname "${HT_DIR}/$1") && "fdec_${HT_FMT}" | gpg --homedir "${HT_DIR}/.gnupg" -r "$HT_KEY" --encrypt -o "${HT_DIR}/${1}"; }
-fget_data() { gpg --homedir "${HT_DIR}/.gnupg" --decrypt "${HT_DIR}/${1}" | "fenc_${HT_FMT}"; }
+fadd_data() { mkdir -p $(dirname "${HT_DIR}/$1") && read -s -p "enter secret in [ ${HT_FMT} ]: " HT_SEC && echo && { echo -n "$HT_SEC" && unset HT_SEC; } | "fdec_${HT_FMT}" | gpg --homedir "${HT_DIR}/.gnupg" -r "$HT_KEY" --encrypt -o "${HT_DIR}/${1}"; }
+fget_data() { gpg --homedir "${HT_DIR}/.gnupg" --decrypt "${HT_DIR}/${1}" | "fenc_${HT_FMT}" "$2"; }
 flst_data() { tree "${HT_DIR}/${1}" | grep -v '+' | tail -n +2 | head -n -2; }
 
 trap "echo [[[ KILL ]]]: sigint catched >&2" INT
-for v in base64 cat cryptsetup echo git gpg head killall mkfs.ext4 mount openssl sed sync tail tree umount xxd; do __exec__ test_command $v; done
+for v in awk base64 cat cryptsetup echo git gpg head killall mkfs.ext4 mount openssl sed sync tail tree umount xxd; do __exec__ test_command $v; done
 case "$1" in
   disk) __exec__ init_disk ;;
-  init) __exec__ open_disk && { __exec__ init_mapper && __exec__ open_mapper && { __exec__ prep_dir ||  { __exec__ kill_gpg && __
-exec__ lock_mapper; } } || __exec__ lock_disk; } ;;
+  init) __exec__ open_disk && { __exec__ init_mapper && __exec__ open_mapper && { __exec__ prep_dir ||  { __exec__ kill_gpg && __exec__ lock_mapper; } } || __exec__ lock_disk; } ;;
   open) __exec__ open_disk && { __exec__ open_mapper || __exec__ lock_disk; } ;;
   lock) __exec__ kill_gpg && __exec__ sync && { __exec__ lock_mapper || true; } && __exec__ lock_disk ;;
   addk) shift && __exec__ [[ $1 =~ ^[a-zA-Z0-9/]+$ ]] && { __exec__ fadd_data "$@" && __exec__ save_git $1; } || __exec__ drop_git ;;

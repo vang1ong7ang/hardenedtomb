@@ -9,6 +9,27 @@ HT_FMT="${HT_FMT:-hex}"
 
 __exec__() { >&2 "$@" || { >&2 echo "[[[ FAIL ]]]: $@" && false; } }
 __exeo__() { "$@" || { >&2 echo "[[[ FAIL ]]]: $@" && false; } }
+
+fenc_hex() { xxd -p -c32; }
+fenc_raw() { cat; }
+fenc_b64() { base64; }
+fenc_der_k256() { fenc_hex | sed "s/^/302e0201010420/" | sed "s/$/a00706052b8104000a/" | xxd -r -p; }
+fenc_pem_k256() { fenc_der_k256 | openssl ec -inform der; }
+fenc_der_p256() { { echo 30310201010420 && fenc_hex && echo a00a06082a8648ce3d030107; } | xxd -r -p; }
+fenc_pem_p256() { fenc_der_p256 | openssl ec -inform der; }
+fenc_pub_der_k256() { fenc_der_k256 | openssl ec -inform der -outform der -pubout; }
+fenc_pub_pem_k256() { fenc_der_k256 | openssl ec -inform der -outform pem -pubout; }
+fenc_pub_raw_k256() { fenc_pub_der_k256 | tail -c 64; }
+fenc_pub_hex_k256() { fenc_pub_raw_k256 | xxd -p -c32; }
+fenc_pub_der_p256() { fenc_der_p256 | openssl ec -inform der -outform der -pubout; }
+fenc_pub_pem_p256() { fenc_der_k256 | openssl ec -inform der -outform pem -pubout; }
+fenc_pub_raw_p256() { fenc_pub_der_p256 | tail -c 64; }
+fenc_pub_hex_p256() { fenc_pub_raw_p256 | xxd -p -c32; }
+fenc_pub_addr_eth() { fenc_pub_raw_k256 | openssl dgst -keccak-256 -binary | tail -c20 | xxd -p -c20 | sed "s/^/0x/"; }
+fdec_hex() { xxd -r -p; }
+fdec_raw() { cat; }
+fdec_b64() { base64 -d; }
+
 init_disk() { cryptsetup luksFormat --hash sha512 --key-size 512 "$HT_IMG"; }
 open_disk() { cryptsetup luksOpen "$HT_IMG" "$HT_MAP"; }
 lock_disk() { cryptsetup luksClose "/dev/mapper/${HT_MAP}"; }
@@ -22,25 +43,6 @@ save_git() { cd "$HT_DIR" && git add "$1" && git commit -m save; }
 drop_git() { cd "$HT_DIR" && git reset --hard && git clean -df; }
 prep_dir() { init_gpg && init_git && sync; }
 test_command() { >/dev/null command -v $1; }
-fenc_hex() { xxd -p; }
-fdec_hex() { xxd -r -p; }
-fenc_raw() { cat; }
-fdec_raw() { cat; }
-fenc_b64() { base64; }
-fdec_b64() { base64 -d; }
-fenc_der_k256() { { echo 302e0201010420 && fenc_hex && echo a00706052b8104000a; } | xxd -r -p; }
-fenc_pem_k256() { fenc_der_k256 | openssl ec -inform der; }
-fenc_der_p256() { { echo 30310201010420 && fenc_hex && echo a00a06082a8648ce3d030107; } | xxd -r -p; }
-fenc_pem_p256() { fenc_der_p256 | openssl ec -inform der; }
-fenc_pub_der_k256() { fenc_der_k256 | openssl ec -inform der -outform der -pubout; }
-fenc_pub_pem_k256() { fenc_der_k256 | openssl ec -inform der -outform pem -pubout; }
-fenc_pub_raw_k256() { fenc_pub_der_k256 | tail -c 64; }
-fenc_pub_hex_k256() { fenc_pub_raw_k256 | xxd -p -c32; }
-fenc_pub_der_p256() { fenc_der_p256 | openssl ec -inform der -outform der -pubout; }
-fenc_pub_pem_p256() { fenc_der_k256 | openssl ec -inform der -outform pem -pubout; }
-fenc_pub_raw_p256() { fenc_pub_der_p256 | tail -c 64; }
-fenc_pub_hex_p256() { fenc_pub_raw_p256 | xxd -p -c32; }
-fenc_pub_addr_eth() { fenc_pub_raw_k256 | openssl dgst -keccak-256 -binary | tail -c20 | xxd -p -c20 | sed "s/^/0x/"; }
 fadd_data() { mkdir -p $(dirname "${HT_DIR}/$1") && "fdec_${HT_FMT}" | gpg --homedir "${HT_DIR}/.gnupg" -r "$HT_KEY" --encrypt -o "${HT_DIR}/${1}"; }
 fget_data() { gpg --homedir "${HT_DIR}/.gnupg" --decrypt "${HT_DIR}/${1}" | "fenc_${HT_FMT}"; }
 flst_data() { tree "${HT_DIR}/${1}" | grep -v '+' | tail -n +2 | head -n -2; }

@@ -28,6 +28,7 @@ RUN tar xvf /tmp/buildroot.tar.gz --strip-components=1
 COPY defconfig /buildroot/defconfig
 COPY linux.config /buildroot/linux.config
 COPY ht /buildroot/rootfs.overlay/bin/ht
+RUN chmod +x /buildroot/rootfs.overlay/bin/ht
 RUN make defconfig BR2_DEFCONFIG=defconfig
 RUN make
 CMD bash

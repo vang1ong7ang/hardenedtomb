@@ -18,11 +18,14 @@ see <https://vang1ong7ang.github.io/hardenedtomb/> to download a working kernel 
 
 ## environment
 
-- `HT_IMG`: the block device for hardened tomb to be used
-- `HT_MAP`: the device mapper name
-- `HT_DIR`: the working directory to mount
-- `HT_KEY`: the gpg key id
-- `HT_FMT`: the input and output format
+- `HT_IMG`: the block device for hardened tomb to be used; default: `/dev/vda`
+- `HT_MAP`: the device mapper name; default: `HT`
+- `HT_DIR`: the working directory to mount; default: `/mnt`
+- `HT_KEY`: the gpg key id; default: `hardenedtomb`
+- `HT_FMT`: the input and output format; default: `hex`
+- `HT_CRV`: ecdsa curve to use; default: `k256`
+- `HT_PUB`: public key display format; default: `hex`
+- `HT_SHA`: hash algorithm; default: `keccak-256`
 
 ## usage
 

@@ -40,7 +40,7 @@ fenc_pub_der_secp256r1() { fenc_der_secp256r1 | openssl ec -inform der -outform 
 fenc_pub_pem_secp256r1() { fenc_der_secp256k1 | openssl ec -inform der -outform pem -pubout; }
 fenc_pub_raw_secp256r1() { fenc_pub_der_secp256r1 | tail -c 64; }
 fenc_pub_hex_secp256r1() { fenc_pub_raw_secp256r1 | xxd -p -c32; }
-fenc_pub_address_ethereum() { fenc_pub_raw_secp256k1 | openssl dgst -keccak-256 -binary | tail -c20 | xxd -p -c20 | sed "s/^/0x/"; }
+fenc_pub_addr_eth() { fenc_pub_raw_secp256k1 | openssl dgst -keccak-256 -binary | tail -c20 | xxd -p -c20 | sed "s/^/0x/"; }
 fadd_data() { mkdir -p $(dirname "${HT_DIR}/$1") && "fdec_${HT_FMT}" | gpg --homedir "${HT_DIR}/.gnupg" -r "$HT_KEY" --encrypt -o "${HT_DIR}/${1}"; }
 fget_data() { gpg --homedir "${HT_DIR}/.gnupg" --decrypt "${HT_DIR}/${1}" | "fenc_${HT_FMT}"; }
 flst_data() { tree "${HT_DIR}/${1}" | grep -v '+' | tail -n +2 | head -n -2; }

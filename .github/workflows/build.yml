@@ -10,8 +10,8 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build . -t br
       - run: mkdir _site
-      - run: echo '<ul><li><a href="Image.gz">Image.gz</a></li><li><a href="rootfs.cpio.xz">rootfs.cpio.xz</a></li></ul>' > _site/index.html
       - run: docker run --rm br cat /buildroot/output/images/Image.gz > _site/Image.gz
       - run: docker run --rm br cat /buildroot/output/images/rootfs.cpio.xz > _site/rootfs.cpio.xz
+      - run: cd _site && tree -H '.' -s -D -o index.html
       - uses: actions/upload-pages-artifact@v3
       - uses: actions/deploy-pages@v4

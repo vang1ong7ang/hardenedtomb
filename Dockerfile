@@ -25,9 +25,11 @@ RUN chown -R nobody /buildroot
 USER nobody
 RUN wget https://buildroot.org/downloads/buildroot-2024.05.2.tar.gz -O /tmp/buildroot.tar.gz
 RUN tar xvf /tmp/buildroot.tar.gz --strip-components=1
+RUN mkdir -p /buildroot/rootfs.overlay/bin/
+RUN wget https://raw.githubusercontent.com/hardenedtomb/ht/main/ht -O /buildroot/rootfs.overlay/bin/ht
+RUN chmod 755 /buildroot/rootfs.overlay/bin/ht
 COPY defconfig /buildroot/defconfig
 COPY linux.config /buildroot/linux.config
-COPY --chmod=0755 ht /buildroot/rootfs.overlay/bin/ht
 RUN make defconfig BR2_DEFCONFIG=defconfig
 RUN make
 CMD bash
